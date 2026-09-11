@@ -27,9 +27,11 @@ export interface IPayment extends Document {
   senderAddress: string;
   beneficiaryAddress: string;
   tokenAddress: string;
-  amount: string; // stored as string to handle large numbers
-  status: 'pending' | 'released' | 'cancelled' | 'timed_out';
+  amount: string; // stored as string to handle large numbers (total)
+  milestones: { amount: string; status: 'pending' | 'released' }[];
+  status: 'pending' | 'released' | 'cancelled' | 'timed_out' | 'frozen';
   threshold: number;
+  arbitrator?: string;
   approvers: string[];
   shareLink: string;
   /** Ledger timestamp after which timeout activates. 0 = no deadline. */
@@ -38,8 +40,11 @@ export interface IPayment extends Document {
   fallback: 'refund_sender' | 'release_beneficiary';
   /** Walletless payment fields */
   walletless?: boolean;
+  walletlessSender?: boolean;
   temporaryPublicKey?: string;
+  temporarySenderPublicKey?: string;
   claimPinHash?: string;
+  evidenceHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,15 +55,23 @@ const PaymentSchema = new Schema<IPayment>({
   beneficiaryAddress: { type: String, required: true },
   tokenAddress: { type: String, required: true },
   amount: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'released', 'cancelled', 'timed_out'], default: 'pending' },
+  milestones: [{
+    amount: { type: String, required: true },
+    status: { type: String, enum: ['pending', 'released'], default: 'pending' }
+  }],
+  status: { type: String, enum: ['pending', 'released', 'cancelled', 'timed_out', 'frozen'], default: 'pending' },
   threshold: { type: Number, required: true },
+  arbitrator: { type: String },
   approvers: [{ type: String }],
   shareLink: { type: String, unique: true, index: true },
   deadline: { type: Number, default: 0 },
   fallback: { type: String, enum: ['refund_sender', 'release_beneficiary'], default: 'refund_sender' },
   walletless: { type: Boolean, default: false },
+  walletlessSender: { type: Boolean, default: false },
   temporaryPublicKey: { type: String },
+  temporarySenderPublicKey: { type: String },
   claimPinHash: { type: String },
+  evidenceHash: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
@@ -70,6 +83,7 @@ export const Payment = mongoose.model<IPayment>('Payment', PaymentSchema);
 export interface IApproval extends Document {
   paymentId: mongoose.Types.ObjectId;
   escrowId: string;
+  milestoneId: number;
   approverAddress: string;
   approvedAt: Date;
   txHash: string;
@@ -78,6 +92,7 @@ export interface IApproval extends Document {
 const ApprovalSchema = new Schema<IApproval>({
   paymentId: { type: Schema.Types.ObjectId, ref: 'Payment', required: true },
   escrowId: { type: String, required: true, index: true },
+  milestoneId: { type: Number, required: true, default: 0 },
   approverAddress: { type: String, required: true },
   approvedAt: { type: Date, default: Date.now },
   txHash: { type: String },

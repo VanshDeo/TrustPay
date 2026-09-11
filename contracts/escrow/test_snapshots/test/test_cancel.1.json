@@ -68,10 +68,14 @@
                   "address": "CACMVW2KK4H5FZDFF2AUCAKQTEJMZZWJUIZF23XMRVYQBSXYLHZ6BKWN"
                 },
                 {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 300000000
-                  }
+                  "vec": [
+                    {
+                      "i128": {
+                        "hi": 0,
+                        "lo": 300000000
+                      }
+                    }
+                  ]
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
@@ -255,17 +259,6 @@
                   "map": [
                     {
                       "key": {
-                        "symbol": "amount"
-                      },
-                      "val": {
-                        "i128": {
-                          "hi": 0,
-                          "lo": 300000000
-                        }
-                      }
-                    },
-                    {
-                      "key": {
                         "symbol": "approval_contract"
                       },
                       "val": {
@@ -306,6 +299,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "evidence_hash"
+                      },
+                      "val": {
+                        "bytes": ""
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "fallback"
                       },
                       "val": {
@@ -314,6 +315,29 @@
                             "symbol": "RefundSender"
                           }
                         ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "milestone_amounts"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "i128": {
+                              "hi": 0,
+                              "lo": 300000000
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "released_milestones"
+                      },
+                      "val": {
+                        "vec": []
                       }
                     },
                     {
@@ -1117,10 +1141,14 @@
                   "address": "CACMVW2KK4H5FZDFF2AUCAKQTEJMZZWJUIZF23XMRVYQBSXYLHZ6BKWN"
                 },
                 {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 300000000
-                  }
+                  "vec": [
+                    {
+                      "i128": {
+                        "hi": 0,
+                        "lo": 300000000
+                      }
+                    }
+                  ]
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
@@ -1572,17 +1600,6 @@
               "map": [
                 {
                   "key": {
-                    "symbol": "amount"
-                  },
-                  "val": {
-                    "i128": {
-                      "hi": 0,
-                      "lo": 300000000
-                    }
-                  }
-                },
-                {
-                  "key": {
                     "symbol": "approval_contract"
                   },
                   "val": {
@@ -1623,6 +1640,14 @@
                 },
                 {
                   "key": {
+                    "symbol": "evidence_hash"
+                  },
+                  "val": {
+                    "bytes": ""
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "fallback"
                   },
                   "val": {
@@ -1631,6 +1656,29 @@
                         "symbol": "RefundSender"
                       }
                     ]
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "milestone_amounts"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "i128": {
+                          "hi": 0,
+                          "lo": 300000000
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "released_milestones"
+                  },
+                  "val": {
+                    "vec": []
                   }
                 },
                 {

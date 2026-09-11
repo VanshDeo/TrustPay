@@ -20,6 +20,7 @@ interface Payment {
   status: string;
   threshold: number;
   shareLink: string;
+  milestones: { amount: string; status: string }[];
   createdAt: string;
 }
 
@@ -28,7 +29,7 @@ export default function DashboardPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'pending' | 'released' | 'cancelled'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'released' | 'cancelled' | 'frozen'>('all');
 
   useEffect(() => {
     async function load() {
@@ -62,6 +63,7 @@ export default function DashboardPage() {
     switch (status) {
       case 'released': return <CheckCircle2 className="h-4 w-4 text-emerald-400" />;
       case 'cancelled': return <XCircle className="h-4 w-4 text-red-400" />;
+      case 'frozen': return <XCircle className="h-4 w-4 text-blue-400" />;
       default: return <Clock className="h-4 w-4 text-amber-400" />;
     }
   };
@@ -71,6 +73,7 @@ export default function DashboardPage() {
       pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
       released: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
       cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
+      frozen: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     };
     return styles[status as keyof typeof styles] || styles.pending;
   };
@@ -114,8 +117,8 @@ export default function DashboardPage() {
               className="input-field !pl-10 text-sm"
             />
           </div>
-          <div className="flex gap-2">
-            {(['all', 'pending', 'released', 'cancelled'] as const).map((f) => (
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+            {(['all', 'pending', 'released', 'cancelled', 'frozen'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -143,6 +146,9 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {filtered.map((payment, i) => {
               const isSender = payment.senderAddress === publicKey;
+              const releasedCount = payment.milestones?.filter(m => m.status === 'released').length || 0;
+              const totalMilestones = payment.milestones?.length || 1;
+              const hasMultipleMilestones = totalMilestones > 1;
               return (
                 <motion.div
                   key={payment._id}
@@ -173,9 +179,16 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <p className="text-lg font-semibold text-white">
-                      {stroopsToXlm(payment.amount)} XLM
-                    </p>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-white">
+                        {stroopsToXlm(payment.amount)} XLM
+                      </p>
+                      {hasMultipleMilestones && (
+                        <p className="text-xs text-indigo-400">
+                          {releasedCount} of {totalMilestones} released
+                        </p>
+                      )}
+                    </div>
                     <div className={`flex items-center gap-1 rounded-full border px-3 py-1 ${statusBadge(payment.status)}`}>
                       {statusIcon(payment.status)}
                       <span className="text-xs font-medium capitalize">{payment.status}</span>

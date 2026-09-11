@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contractimpl, contracttype, contracterror,
-    symbol_short, Address, Env, BytesN, Val, Vec, Symbol,
+    symbol_short, Address, Env, BytesN, Val, Vec, Symbol, IntoVal,
     auth::{Context, CustomAccountInterface},
     crypto::Hash,
 };
@@ -113,6 +113,26 @@ impl TrustPaySmartWallet {
         );
 
         Ok(result)
+    }
+
+    /// Freeze a pending escrow (guardian action).
+    pub fn freeze_pending(env: Env, guardian: Address, target_contract: Address, escrow_id: u64) -> Result<(), WalletError> {
+        guardian.require_auth();
+
+        if !Self::is_guardian(env.clone(), guardian.clone()) {
+            return Err(WalletError::Unauthorized);
+        }
+
+        // Invoke the escrow contract's freeze function
+        let args = (escrow_id,).into_val(&env);
+        env.invoke_contract::<()>(&target_contract, &symbol_short!("freeze"), args);
+
+        env.events().publish(
+            (symbol_short!("wallet"), symbol_short!("freeze")),
+            (guardian, target_contract, escrow_id),
+        );
+
+        Ok(())
     }
 
     /// Add a guardian for social recovery.

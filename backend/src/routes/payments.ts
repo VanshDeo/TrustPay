@@ -37,17 +37,22 @@ router.post('/', async (req: Request, res: Response) => {
       fallback,
       walletless,
       claimPin,
+      milestones,
+      arbitrator,
+      walletlessSender,
     } = req.body;
 
     // Generate a unique shareable link
     const shareLink = uuidv4().replace(/-/g, '').substring(0, 12);
 
-    // Upsert the sender as a user
-    await User.findOneAndUpdate(
-      { walletAddress: senderAddress },
-      { walletAddress: senderAddress, lastSeen: new Date() },
-      { upsert: true, new: true }
-    );
+    // Upsert the sender as a user (if provided)
+    if (senderAddress) {
+      await User.findOneAndUpdate(
+        { walletAddress: senderAddress },
+        { walletAddress: senderAddress, lastSeen: new Date() },
+        { upsert: true, new: true }
+      );
+    }
 
     // Validate deadline if provided
     const deadlineValue = typeof deadline === 'number' && deadline > 0 ? deadline : 0;
@@ -75,19 +80,41 @@ router.post('/', async (req: Request, res: Response) => {
       claimPinHash = hashPin(claimPin, shareLink);
     }
 
+    let finalSenderAddress = senderAddress;
+    let temporarySenderPublicKey = undefined;
+    let temporarySenderSecret = undefined;
+    
+    if (walletlessSender) {
+      const keypair = StellarSdk.Keypair.random();
+      temporarySenderPublicKey = keypair.publicKey();
+      temporarySenderSecret = keypair.secret();
+      finalSenderAddress = temporarySenderPublicKey;
+    }
+    
+    let dbMilestones = [];
+    if (milestones && Array.isArray(milestones) && milestones.length > 0) {
+      dbMilestones = milestones.map((amt: string) => ({ amount: amt.toString(), status: 'pending' }));
+    } else {
+      dbMilestones = [{ amount: amount.toString(), status: 'pending' }];
+    }
+
     const payment = await Payment.create({
       escrowId: escrowId || uuidv4(),
-      senderAddress,
+      senderAddress: finalSenderAddress,
       beneficiaryAddress: finalBeneficiaryAddress,
       tokenAddress,
       amount: amount.toString(),
+      milestones: dbMilestones,
       threshold,
+      arbitrator,
       approvers: approvers || [],
       shareLink,
       deadline: deadlineValue,
       fallback: fallbackValue,
       walletless,
+      walletlessSender,
       temporaryPublicKey,
+      temporarySenderPublicKey,
       claimPinHash,
     });
 
@@ -96,6 +123,7 @@ router.post('/', async (req: Request, res: Response) => {
       payment,
       shareUrl: `/claim/${shareLink}`,
       temporarySecret,
+      temporarySenderSecret,
     });
   } catch (error: any) {
     console.error('Error creating payment:', error);

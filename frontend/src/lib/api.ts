@@ -16,14 +16,17 @@ async function fetchApi(path: string, options?: RequestInit) {
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
 export async function createPayment(data: {
-  senderAddress: string;
-  beneficiaryAddress?: string; // Optional for walletless
+  senderAddress?: string; // Optional if walletlessSender
+  beneficiaryAddress?: string; // Optional for walletless (recipient)
   tokenAddress: string;
-  amount: string;
+  amount: string; // total amount
+  milestones?: string[]; // array of XLM string amounts
   threshold: number;
   approvers: string[];
+  arbitrator?: string;
   escrowId?: string;
-  walletless?: boolean;
+  walletless?: boolean; // walletless recipient
+  walletlessSender?: boolean; // walletless sender
   claimPin?: string;
 }) {
   return fetchApi('/api/payments', {
