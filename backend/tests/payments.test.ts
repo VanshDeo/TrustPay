@@ -17,12 +17,20 @@ const payments: any[] = [];
 let idCounter = 0;
 
 app.post('/api/payments', (req, res) => {
-  const { senderAddress, beneficiaryAddress, amount, threshold } = req.body;
+  const { senderAddress, beneficiaryAddress, amount, threshold, deadline, fallback } = req.body;
   if (!senderAddress || !beneficiaryAddress || !amount) {
     return res.status(400).json({ success: false, error: 'Missing fields' });
   }
 
   idCounter++;
+
+  // Validate deadline
+  const deadlineValue = typeof deadline === 'number' && deadline > 0 ? deadline : 0;
+
+  // Validate fallback
+  const validFallbacks = ['refund_sender', 'release_beneficiary'];
+  const fallbackValue = validFallbacks.includes(fallback) ? fallback : 'refund_sender';
+
   const payment = {
     _id: `test-${idCounter}`,
     escrowId: `escrow-${idCounter}`,
@@ -33,6 +41,8 @@ app.post('/api/payments', (req, res) => {
     status: 'pending',
     threshold: threshold || 2,
     shareLink: `link${idCounter}`,
+    deadline: deadlineValue,
+    fallback: fallbackValue,
     createdAt: new Date(),
   };
   payments.push(payment);
@@ -112,5 +122,41 @@ describe('Payment API', () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
+  });
+
+  // ─── Phase 1: deadline/fallback field tests ─────────────────────────────
+
+  test('POST /api/payments with deadline and fallback stores them correctly', async () => {
+    const res = await request(app)
+      .post('/api/payments')
+      .send({
+        senderAddress: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+        beneficiaryAddress: 'GCFXHS4GXL6BVUCXBWXGTITROWLVYXQKQLF4YH5O5JT3YZXCYPAFBJZB',
+        amount: '1000000000',
+        threshold: 2,
+        deadline: 1700000000,
+        fallback: 'release_beneficiary',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.payment.deadline).toBe(1700000000);
+    expect(res.body.payment.fallback).toBe('release_beneficiary');
+  });
+
+  test('POST /api/payments without deadline/fallback uses defaults', async () => {
+    const res = await request(app)
+      .post('/api/payments')
+      .send({
+        senderAddress: 'GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI',
+        beneficiaryAddress: 'GCFXHS4GXL6BVUCXBWXGTITROWLVYXQKQLF4YH5O5JT3YZXCYPAFBJZB',
+        amount: '250000000',
+        threshold: 1,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.payment.deadline).toBe(0);
+    expect(res.body.payment.fallback).toBe('refund_sender');
   });
 });

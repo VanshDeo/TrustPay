@@ -70,7 +70,7 @@
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500000000
+                    "lo": 400000000
                   }
                 },
                 {
@@ -80,12 +80,12 @@
                   "u32": 2
                 },
                 {
-                  "u64": 0
+                  "u64": 200
                 },
                 {
                   "vec": [
                     {
-                      "symbol": "RefundSender"
+                      "symbol": "ReleaseBeneficiary"
                     }
                   ]
                 }
@@ -108,7 +108,7 @@
                     {
                       "i128": {
                         "hi": 0,
-                        "lo": 500000000
+                        "lo": 400000000
                       }
                     }
                   ]
@@ -128,7 +128,7 @@
   "ledger": {
     "protocol_version": 21,
     "sequence_number": 0,
-    "timestamp": 0,
+    "timestamp": 201,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
     "base_reserve": 0,
     "min_persistent_entry_ttl": 4096,
@@ -240,7 +240,7 @@
                       "val": {
                         "i128": {
                           "hi": 0,
-                          "lo": 500000000
+                          "lo": 400000000
                         }
                       }
                     },
@@ -265,7 +265,7 @@
                         "symbol": "created_at"
                       },
                       "val": {
-                        "u64": 0
+                        "u64": 50
                       }
                     },
                     {
@@ -273,7 +273,7 @@
                         "symbol": "deadline"
                       },
                       "val": {
-                        "u64": 0
+                        "u64": 200
                       }
                     },
                     {
@@ -291,7 +291,7 @@
                       "val": {
                         "vec": [
                           {
-                            "symbol": "RefundSender"
+                            "symbol": "ReleaseBeneficiary"
                           }
                         ]
                       }
@@ -311,7 +311,7 @@
                       "val": {
                         "vec": [
                           {
-                            "symbol": "Released"
+                            "symbol": "TimedOut"
                           }
                         ]
                       }
@@ -613,7 +613,7 @@
                       "val": {
                         "i128": {
                           "hi": 0,
-                          "lo": 500000000
+                          "lo": 600000000
                         }
                       }
                     },
@@ -686,7 +686,7 @@
                       "val": {
                         "i128": {
                           "hi": 0,
-                          "lo": 500000000
+                          "lo": 400000000
                         }
                       }
                     },
@@ -1139,7 +1139,7 @@
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500000000
+                    "lo": 400000000
                   }
                 },
                 {
@@ -1149,12 +1149,12 @@
                   "u32": 2
                 },
                 {
-                  "u64": 0
+                  "u64": 200
                 },
                 {
                   "vec": [
                     {
-                      "symbol": "RefundSender"
+                      "symbol": "ReleaseBeneficiary"
                     }
                   ]
                 }
@@ -1194,7 +1194,7 @@
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500000000
+                    "lo": 400000000
                   }
                 }
               ]
@@ -1228,7 +1228,7 @@
             "data": {
               "i128": {
                 "hi": 0,
-                "lo": 500000000
+                "lo": 400000000
               }
             }
           }
@@ -1286,7 +1286,7 @@
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500000000
+                    "lo": 400000000
                   }
                 }
               ]
@@ -1331,115 +1331,14 @@
                 "symbol": "fn_call"
               },
               {
-                "bytes": "04cadb4a570fd2e4652e814101509912cce6c9a2325d6eec8d7100caf859f3e0"
-              },
-              {
-                "symbol": "balance"
-              }
-            ],
-            "data": {
-              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "04cadb4a570fd2e4652e814101509912cce6c9a2325d6eec8d7100caf859f3e0",
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_return"
-              },
-              {
-                "symbol": "balance"
-              }
-            ],
-            "data": {
-              "i128": {
-                "hi": 0,
-                "lo": 500000000
-              }
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": null,
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_call"
-              },
-              {
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "release_escrow"
+                "symbol": "check_timeout"
               }
             ],
             "data": {
               "u64": 1
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_call"
-              },
-              {
-                "bytes": "0000000000000000000000000000000000000000000000000000000000000002"
-              },
-              {
-                "symbol": "is_approved"
-              }
-            ],
-            "data": {
-              "u64": 1
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "0000000000000000000000000000000000000000000000000000000000000002",
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_return"
-              },
-              {
-                "symbol": "is_approved"
-              }
-            ],
-            "data": {
-              "bool": true
             }
           }
         }
@@ -1475,7 +1374,7 @@
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500000000
+                    "lo": 400000000
                   }
                 }
               ]
@@ -1509,7 +1408,7 @@
             "data": {
               "i128": {
                 "hi": 0,
-                "lo": 500000000
+                "lo": 400000000
               }
             }
           }
@@ -1550,7 +1449,7 @@
                 "symbol": "escrow"
               },
               {
-                "symbol": "released"
+                "symbol": "timeout"
               }
             ],
             "data": {
@@ -1559,12 +1458,9 @@
                   "u64": 1
                 },
                 {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
-                },
-                {
                   "i128": {
                     "hi": 0,
-                    "lo": 500000000
+                    "lo": 400000000
                   }
                 }
               ]
@@ -1586,7 +1482,7 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "release_escrow"
+                "symbol": "check_timeout"
               }
             ],
             "data": "void"
@@ -1639,7 +1535,59 @@
             "data": {
               "i128": {
                 "hi": 0,
-                "lo": 500000000
+                "lo": 400000000
+              }
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_call"
+              },
+              {
+                "bytes": "04cadb4a570fd2e4652e814101509912cce6c9a2325d6eec8d7100caf859f3e0"
+              },
+              {
+                "symbol": "balance"
+              }
+            ],
+            "data": {
+              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "04cadb4a570fd2e4652e814101509912cce6c9a2325d6eec8d7100caf859f3e0",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "fn_return"
+              },
+              {
+                "symbol": "balance"
+              }
+            ],
+            "data": {
+              "i128": {
+                "hi": 0,
+                "lo": 0
               }
             }
           }
@@ -1697,7 +1645,7 @@
                   "val": {
                     "i128": {
                       "hi": 0,
-                      "lo": 500000000
+                      "lo": 400000000
                     }
                   }
                 },
@@ -1722,7 +1670,7 @@
                     "symbol": "created_at"
                   },
                   "val": {
-                    "u64": 0
+                    "u64": 50
                   }
                 },
                 {
@@ -1730,7 +1678,7 @@
                     "symbol": "deadline"
                   },
                   "val": {
-                    "u64": 0
+                    "u64": 200
                   }
                 },
                 {
@@ -1748,7 +1696,7 @@
                   "val": {
                     "vec": [
                       {
-                        "symbol": "RefundSender"
+                        "symbol": "ReleaseBeneficiary"
                       }
                     ]
                   }
@@ -1768,7 +1716,7 @@
                   "val": {
                     "vec": [
                       {
-                        "symbol": "Released"
+                        "symbol": "TimedOut"
                       }
                     ]
                   }

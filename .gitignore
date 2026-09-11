@@ -35,3 +35,10 @@ coverage/
 
 # Build artifacts
 *.tsbuildinfo
+._*
+Architecture.md
+Design.md
+PRD.md
+Rules.md
+Phases.md
+Memory.md

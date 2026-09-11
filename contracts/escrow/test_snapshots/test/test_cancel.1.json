@@ -78,6 +78,16 @@
                 },
                 {
                   "u32": 2
+                },
+                {
+                  "u64": 0
+                },
+                {
+                  "vec": [
+                    {
+                      "symbol": "RefundSender"
+                    }
+                  ]
                 }
               ]
             }
@@ -280,10 +290,30 @@
                     },
                     {
                       "key": {
+                        "symbol": "deadline"
+                      },
+                      "val": {
+                        "u64": 0
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "escrow_id"
                       },
                       "val": {
                         "u64": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "fallback"
+                      },
+                      "val": {
+                        "vec": [
+                          {
+                            "symbol": "RefundSender"
+                          }
+                        ]
                       }
                     },
                     {
@@ -1097,6 +1127,16 @@
                 },
                 {
                   "u32": 2
+                },
+                {
+                  "u64": 0
+                },
+                {
+                  "vec": [
+                    {
+                      "symbol": "RefundSender"
+                    }
+                  ]
                 }
               ]
             }
@@ -1567,10 +1607,30 @@
                 },
                 {
                   "key": {
+                    "symbol": "deadline"
+                  },
+                  "val": {
+                    "u64": 0
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "escrow_id"
                   },
                   "val": {
                     "u64": 1
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "fallback"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "symbol": "RefundSender"
+                      }
+                    ]
                   }
                 },
                 {

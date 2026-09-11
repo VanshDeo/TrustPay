@@ -122,4 +122,59 @@ export async function getContractEvents(
   }
 }
 
+export async function claimWalletlessPayment(
+  temporarySecret: string,
+  recipientAddress: string,
+  tokenAddress: string,
+  amount: string
+): Promise<any> {
+  const temporaryKeypair = StellarSdk.Keypair.fromSecret(temporarySecret);
+  const sourcePublicKey = temporaryKeypair.publicKey();
+
+  const SPONSOR_SECRET = process.env.SPONSOR_SECRET_KEY || '';
+  if (!SPONSOR_SECRET) {
+    throw new Error('SPONSOR_SECRET_KEY not configured');
+  }
+  const sponsorKeypair = StellarSdk.Keypair.fromSecret(SPONSOR_SECRET);
+  const sponsorAccount = await rpcServer.getAccount(sponsorKeypair.publicKey());
+
+  const contract = new StellarSdk.Contract(tokenAddress);
+  
+  let tx = new StellarSdk.TransactionBuilder(sponsorAccount, {
+    fee: '10000',
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(contract.call('transfer', 
+      StellarSdk.nativeToScVal(sourcePublicKey, { type: 'address' }),
+      StellarSdk.nativeToScVal(recipientAddress, { type: 'address' }),
+      StellarSdk.nativeToScVal(parseInt(amount), { type: 'i128' })
+    ))
+    .setTimeout(300)
+    .build();
+
+  const simulated = await rpcServer.simulateTransaction(tx);
+  if ('error' in simulated) {
+    throw new Error(`Simulation failed: ${simulated.error}`);
+  }
+
+  const prepared = StellarSdk.rpc.assembleTransaction(tx, simulated).build();
+  
+  // Sign with BOTH the sponsor (for tx source) and the temporary key (for soroban auth)
+  prepared.sign(sponsorKeypair);
+  prepared.sign(temporaryKeypair);
+
+  const response = await rpcServer.sendTransaction(prepared);
+
+  if (response.status === 'PENDING') {
+    let getResponse = await rpcServer.getTransaction(response.hash);
+    while (getResponse.status === 'NOT_FOUND') {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      getResponse = await rpcServer.getTransaction(response.hash);
+    }
+    return getResponse;
+  }
+
+  return response;
+}
+
 export { rpcServer, NETWORK_PASSPHRASE, RPC_URL };

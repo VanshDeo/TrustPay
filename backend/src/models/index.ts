@@ -28,10 +28,18 @@ export interface IPayment extends Document {
   beneficiaryAddress: string;
   tokenAddress: string;
   amount: string; // stored as string to handle large numbers
-  status: 'pending' | 'released' | 'cancelled';
+  status: 'pending' | 'released' | 'cancelled' | 'timed_out';
   threshold: number;
   approvers: string[];
   shareLink: string;
+  /** Ledger timestamp after which timeout activates. 0 = no deadline. */
+  deadline: number;
+  /** What happens on timeout: refund_sender or release_beneficiary */
+  fallback: 'refund_sender' | 'release_beneficiary';
+  /** Walletless payment fields */
+  walletless?: boolean;
+  temporaryPublicKey?: string;
+  claimPinHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,10 +50,15 @@ const PaymentSchema = new Schema<IPayment>({
   beneficiaryAddress: { type: String, required: true },
   tokenAddress: { type: String, required: true },
   amount: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'released', 'cancelled'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'released', 'cancelled', 'timed_out'], default: 'pending' },
   threshold: { type: Number, required: true },
   approvers: [{ type: String }],
   shareLink: { type: String, unique: true, index: true },
+  deadline: { type: Number, default: 0 },
+  fallback: { type: String, enum: ['refund_sender', 'release_beneficiary'], default: 'refund_sender' },
+  walletless: { type: Boolean, default: false },
+  temporaryPublicKey: { type: String },
+  claimPinHash: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

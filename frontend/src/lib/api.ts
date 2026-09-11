@@ -17,12 +17,14 @@ async function fetchApi(path: string, options?: RequestInit) {
 
 export async function createPayment(data: {
   senderAddress: string;
-  beneficiaryAddress: string;
+  beneficiaryAddress?: string; // Optional for walletless
   tokenAddress: string;
   amount: string;
   threshold: number;
   approvers: string[];
   escrowId?: string;
+  walletless?: boolean;
+  claimPin?: string;
 }) {
   return fetchApi('/api/payments', {
     method: 'POST',
@@ -41,6 +43,17 @@ export async function getPaymentById(id: string) {
 
 export async function getPaymentByLink(shareLink: string) {
   return fetchApi(`/api/payments/link/${shareLink}`);
+}
+
+export async function claimWalletlessPayment(shareLink: string, data: {
+  recipientAddress: string;
+  temporarySecret: string;
+  claimPin: string;
+}) {
+  return fetchApi(`/api/payments/link/${shareLink}/claim`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 // ─── Contracts ────────────────────────────────────────────────────────────────

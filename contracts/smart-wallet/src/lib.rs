@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contractimpl, contracttype, contracterror,
-    symbol_short, Address, Env, BytesN, Val, Vec,
+    symbol_short, Address, Env, BytesN, Val, Vec, Symbol,
     auth::{Context, CustomAccountInterface},
     crypto::Hash,
 };
@@ -14,6 +14,27 @@ pub enum DataKey {
     Owner,
     Guardian(Address),
     Nonce,
+    /// Spending limit: max amount per single transaction
+    SpendingLimitPerTx,
+    /// Spending limit: max amount per rolling period
+    SpendingLimitPerPeriod,
+    /// Duration of the spending-limit period (seconds)
+    SpendingPeriodDuration,
+    /// Start timestamp of the current spending period
+    SpendingPeriodStart,
+    /// Amount already used in the current spending period
+    SpendingPeriodUsed,
+}
+
+/// Read-only view of the current spending-limit configuration and usage.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct SpendingLimitInfo {
+    pub per_tx_limit: i128,
+    pub per_period_limit: i128,
+    pub period_duration: u64,
+    pub period_start: u64,
+    pub period_used: i128,
 }
 
 // ─── Errors ───────────────────────────────────────────────────────────────────
@@ -26,6 +47,9 @@ pub enum WalletError {
     AlreadyInitialized = 2,
     Unauthorized = 3,
     InvalidSignature = 4,
+    SpendingLimitExceededPerTx = 5,
+    SpendingLimitExceededPerPeriod = 6,
+    InvalidSpendingLimit = 7,
 }
 
 // ─── Contract ─────────────────────────────────────────────────────────────────
@@ -34,7 +58,8 @@ pub enum WalletError {
 ///
 /// Provides a contract-based account that can execute arbitrary contract calls.
 /// The owner authenticates via ed25519 signatures. Guardians can be added
-/// for social recovery.
+/// for social recovery. Spending limits can be set to cap per-tx and per-period
+/// amounts, enforced uniformly whether the signer is a human or an agent key.
 #[contract]
 pub struct TrustPaySmartWallet;
 
@@ -60,7 +85,7 @@ impl TrustPaySmartWallet {
         env: Env,
         owner: Address,
         target_contract: Address,
-        function_name: soroban_sdk::Symbol,
+        function_name: Symbol,
         args: Vec<Val>,
     ) -> Result<Val, WalletError> {
         owner.require_auth();
@@ -145,6 +170,65 @@ impl TrustPaySmartWallet {
     pub fn get_nonce(env: Env) -> u64 {
         env.storage().instance().get(&DataKey::Nonce).unwrap_or(0)
     }
+
+    /// Set spending limits for this wallet.
+    ///
+    /// Enforced in `__check_auth` for every transaction this wallet authorizes,
+    /// whether signed by a human owner or an agent key.
+    ///
+    /// # Arguments
+    /// * `per_tx_limit` — max token amount in a single transfer (0 = no per-tx limit)
+    /// * `per_period_limit` — max cumulative token amount in a rolling period (0 = no period limit)
+    /// * `period_duration` — length of the rolling period in seconds
+    pub fn set_spending_limit(
+        env: Env,
+        owner: Address,
+        per_tx_limit: i128,
+        per_period_limit: i128,
+        period_duration: u64,
+    ) -> Result<(), WalletError> {
+        owner.require_auth();
+
+        let stored_owner: Address = env.storage().instance()
+            .get(&DataKey::Owner)
+            .ok_or(WalletError::NotInitialized)?;
+
+        if owner != stored_owner {
+            return Err(WalletError::Unauthorized);
+        }
+
+        if per_tx_limit < 0 || per_period_limit < 0 {
+            return Err(WalletError::InvalidSpendingLimit);
+        }
+
+        env.storage().instance().set(&DataKey::SpendingLimitPerTx, &per_tx_limit);
+        env.storage().instance().set(&DataKey::SpendingLimitPerPeriod, &per_period_limit);
+        env.storage().instance().set(&DataKey::SpendingPeriodDuration, &period_duration);
+        env.storage().instance().set(&DataKey::SpendingPeriodStart, &env.ledger().timestamp());
+        env.storage().instance().set(&DataKey::SpendingPeriodUsed, &0i128);
+
+        env.events().publish(
+            (symbol_short!("wallet"), symbol_short!("limit")),
+            (per_tx_limit, per_period_limit, period_duration),
+        );
+        Ok(())
+    }
+
+    /// Get the current spending-limit configuration and usage.
+    pub fn get_spending_limit(env: Env) -> SpendingLimitInfo {
+        SpendingLimitInfo {
+            per_tx_limit: env.storage().instance()
+                .get(&DataKey::SpendingLimitPerTx).unwrap_or(0),
+            per_period_limit: env.storage().instance()
+                .get(&DataKey::SpendingLimitPerPeriod).unwrap_or(0),
+            period_duration: env.storage().instance()
+                .get(&DataKey::SpendingPeriodDuration).unwrap_or(0),
+            period_start: env.storage().instance()
+                .get(&DataKey::SpendingPeriodStart).unwrap_or(0),
+            period_used: env.storage().instance()
+                .get(&DataKey::SpendingPeriodUsed).unwrap_or(0),
+        }
+    }
 }
 
 // Custom account interface for account abstraction
@@ -153,13 +237,17 @@ impl CustomAccountInterface for TrustPaySmartWallet {
     type Error = WalletError;
     type Signature = BytesN<64>;
 
-    /// Custom auth: verify ed25519 signature from the owner.
+    /// Custom auth: verify ed25519 signature from the owner, then enforce
+    /// spending limits if configured.
+    ///
+    /// Spending-limit enforcement inspects auth_contexts for token `transfer`
+    /// calls, extracts amounts, and checks against per-tx and per-period limits.
     #[allow(non_snake_case)]
     fn __check_auth(
         env: Env,
         _signature_payload: Hash<32>,
         signature: BytesN<64>,
-        _auth_contexts: Vec<Context>,
+        auth_contexts: Vec<Context>,
     ) -> Result<(), WalletError> {
         let _owner: Address = env.storage().instance()
             .get(&DataKey::Owner)
@@ -174,6 +262,64 @@ impl CustomAccountInterface for TrustPaySmartWallet {
         if all_zero {
             return Err(WalletError::InvalidSignature);
         }
+
+        // ── Spending-limit enforcement ──────────────────────────────────
+        let per_tx_limit: i128 = env.storage().instance()
+            .get(&DataKey::SpendingLimitPerTx).unwrap_or(0);
+        let per_period_limit: i128 = env.storage().instance()
+            .get(&DataKey::SpendingLimitPerPeriod).unwrap_or(0);
+
+        // If no limits are set, skip enforcement
+        if per_tx_limit == 0 && per_period_limit == 0 {
+            return Ok(());
+        }
+
+        let period_duration: u64 = env.storage().instance()
+            .get(&DataKey::SpendingPeriodDuration).unwrap_or(0);
+        let mut period_start: u64 = env.storage().instance()
+            .get(&DataKey::SpendingPeriodStart).unwrap_or(0);
+        let mut period_used: i128 = env.storage().instance()
+            .get(&DataKey::SpendingPeriodUsed).unwrap_or(0);
+
+        // Reset period if elapsed
+        if period_duration > 0 && env.ledger().timestamp() >= period_start + period_duration {
+            period_start = env.ledger().timestamp();
+            period_used = 0;
+            env.storage().instance().set(&DataKey::SpendingPeriodStart, &period_start);
+        }
+
+        // Scan auth contexts for token transfer calls
+        let transfer_sym = symbol_short!("transfer");
+        for ctx in auth_contexts.iter() {
+            if let Context::Contract(contract_ctx) = ctx {
+                if contract_ctx.fn_name == transfer_sym && contract_ctx.args.len() >= 3 {
+                    // transfer(from, to, amount) — amount is the 3rd arg (index 2)
+                    // Try to extract the i128 amount
+                    if let Ok(amount) = soroban_sdk::TryFromVal::try_from_val(
+                        &env,
+                        &contract_ctx.args.get(2).unwrap(),
+                    ) {
+                        let amount: i128 = amount;
+
+                        // Per-tx limit check
+                        if per_tx_limit > 0 && amount > per_tx_limit {
+                            return Err(WalletError::SpendingLimitExceededPerTx);
+                        }
+
+                        // Per-period limit check
+                        if per_period_limit > 0 {
+                            period_used += amount;
+                            if period_used > per_period_limit {
+                                return Err(WalletError::SpendingLimitExceededPerPeriod);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Persist updated period usage
+        env.storage().instance().set(&DataKey::SpendingPeriodUsed, &period_used);
 
         Ok(())
     }
@@ -205,5 +351,64 @@ mod test {
 
         client.remove_guardian(&owner, &guardian);
         assert!(!client.is_guardian(&guardian));
+    }
+
+    #[test]
+    fn test_set_and_get_spending_limit() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, TrustPaySmartWallet);
+        let client = TrustPaySmartWalletClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        client.initialize(&owner);
+
+        // Initially no limits
+        let info = client.get_spending_limit();
+        assert_eq!(info.per_tx_limit, 0);
+        assert_eq!(info.per_period_limit, 0);
+
+        // Set limits: 100 per tx, 500 per period, period = 3600s
+        client.set_spending_limit(&owner, &100i128, &500i128, &3600u64);
+
+        let info = client.get_spending_limit();
+        assert_eq!(info.per_tx_limit, 100);
+        assert_eq!(info.per_period_limit, 500);
+        assert_eq!(info.period_duration, 3600);
+        assert_eq!(info.period_used, 0);
+    }
+
+    #[test]
+    fn test_spending_limit_unauthorized() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, TrustPaySmartWallet);
+        let client = TrustPaySmartWalletClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let non_owner = Address::generate(&env);
+        client.initialize(&owner);
+
+        // Non-owner should fail (Unauthorized error #3)
+        let result = client.try_set_spending_limit(&non_owner, &100i128, &500i128, &3600u64);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_spending_limit_invalid_values() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, TrustPaySmartWallet);
+        let client = TrustPaySmartWalletClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        client.initialize(&owner);
+
+        // Negative limit should fail
+        let result = client.try_set_spending_limit(&owner, &-1i128, &500i128, &3600u64);
+        assert!(result.is_err());
     }
 }
