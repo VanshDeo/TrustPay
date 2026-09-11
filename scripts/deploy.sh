@@ -1,9 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "Building contracts with standard cargo..."
+echo "Building contracts with stellar CLI..."
 cd contracts
-cargo build --target wasm32-unknown-unknown --release
+rm -rf target || true
+find . -name "._*" -delete || true
+stellar contract build
 cd ..
 
 echo "Configuring testnet..."
@@ -13,20 +15,49 @@ stellar keys generate deployer --network testnet || echo "Identity 'deployer' al
 # Ensure the network is configured
 stellar network add testnet --rpc-url https://soroban-testnet.stellar.org:443 --network-passphrase "Test SDF Network ; September 2015" || true
 
+# Function to deploy with retries
+deploy_with_retry() {
+  local wasm_path=$1
+  local max_attempts=5
+  local attempt=1
+  local result=""
+
+  while [ $attempt -le $max_attempts ]; do
+    echo "  Attempt $attempt of $max_attempts..." >&2
+    # Run the deploy command, capture output, ignore error code initially
+    result=$(stellar contract deploy --wasm "$wasm_path" --source deployer --network testnet 2>&1)
+    
+    # If the result contains a contract ID (usually 56 chars starting with C) and doesn't say "error"
+    if [[ "$result" != *"error:"* && "$result" =~ C[A-Z0-9]{55} ]]; then
+      # Extract just the contract ID (last word of output)
+      echo "$result" | grep -o "C[A-Z0-9]\{55\}" | tail -1
+      return 0
+    fi
+    
+    echo "  Deployment failed or timed out. Retrying in 3 seconds..." >&2
+    sleep 3
+    ((attempt++))
+  done
+
+  echo "Failed to deploy after $max_attempts attempts." >&2
+  echo "$result" >&2
+  exit 1
+}
+
 echo "Deploying TrustPayEscrow..."
-ESCROW_ID=$(stellar contract deploy --wasm contracts/target/wasm32-unknown-unknown/release/trustpay_escrow.wasm --source deployer --network testnet)
+ESCROW_ID=$(deploy_with_retry "contracts/target/wasm32v1-none/release/trustpay_escrow.wasm")
 echo "Escrow Contract ID: $ESCROW_ID"
 
 echo "Deploying TrustPayApproval..."
-APPROVAL_ID=$(stellar contract deploy --wasm contracts/target/wasm32-unknown-unknown/release/trustpay_approval.wasm --source deployer --network testnet)
+APPROVAL_ID=$(deploy_with_retry "contracts/target/wasm32v1-none/release/trustpay_approval.wasm")
 echo "Approval Contract ID: $APPROVAL_ID"
 
 echo "Deploying TrustPaySmartWallet..."
-WALLET_ID=$(stellar contract deploy --wasm contracts/target/wasm32-unknown-unknown/release/trustpay_smart_wallet.wasm --source deployer --network testnet)
+WALLET_ID=$(deploy_with_retry "contracts/target/wasm32v1-none/release/trustpay_smart_wallet.wasm")
 echo "Smart Wallet Contract ID: $WALLET_ID"
 
 echo "Deploying FeeSponsor..."
-SPONSOR_ID=$(stellar contract deploy --wasm contracts/target/wasm32-unknown-unknown/release/trustpay_fee_sponsor.wasm --source deployer --network testnet)
+SPONSOR_ID=$(deploy_with_retry "contracts/target/wasm32v1-none/release/trustpay_fee_sponsor.wasm")
 echo "Fee Sponsor Contract ID: $SPONSOR_ID"
 
 echo "---------------------------------------------------"

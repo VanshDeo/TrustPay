@@ -8,16 +8,12 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
   walletAddress: string;
-  name?: string;
-  email?: string;
   createdAt: Date;
   lastSeen: Date;
 }
 
 const UserSchema = new Schema<IUser>({
   walletAddress: { type: String, required: true, unique: true, index: true },
-  name: { type: String },
-  email: { type: String },
   createdAt: { type: Date, default: Date.now },
   lastSeen: { type: Date, default: Date.now },
 });

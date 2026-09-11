@@ -9,7 +9,6 @@ import { Payment, User, Approval } from '../models';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { sendWalletlessOnboardingEmail } from '../services/email';
 
 const router = Router();
 
@@ -41,8 +40,6 @@ router.post('/', async (req: Request, res: Response) => {
       milestones,
       arbitrator,
       walletlessSender,
-      senderName,
-      senderEmail,
     } = req.body;
 
     // Generate a unique shareable link
@@ -52,12 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
     if (senderAddress) {
       await User.findOneAndUpdate(
         { walletAddress: senderAddress },
-        { 
-          walletAddress: senderAddress, 
-          lastSeen: new Date(),
-          ...(senderName && { name: senderName }),
-          ...(senderEmail && { email: senderEmail })
-        },
+        { walletAddress: senderAddress, lastSeen: new Date() },
         { upsert: true, new: true }
       );
     }
@@ -97,18 +89,6 @@ router.post('/', async (req: Request, res: Response) => {
       temporarySenderPublicKey = keypair.publicKey();
       temporarySenderSecret = keypair.secret();
       finalSenderAddress = temporarySenderPublicKey;
-
-      // Upsert the temporary address as a user so we can store name/email
-      await User.findOneAndUpdate(
-        { walletAddress: finalSenderAddress },
-        { 
-          walletAddress: finalSenderAddress, 
-          lastSeen: new Date(),
-          ...(senderName && { name: senderName }),
-          ...(senderEmail && { email: senderEmail })
-        },
-        { upsert: true, new: true }
-      );
     }
     
     let dbMilestones = [];
@@ -162,13 +142,6 @@ router.post('/', async (req: Request, res: Response) => {
       if (txResponse.status !== 'SUCCESS') {
         throw new Error('Failed to create escrow on-chain: ' + JSON.stringify(txResponse));
       }
-    }
-
-    // Send an email if the user provided one during walletless flow
-    if (senderEmail && walletlessSender) {
-      sendWalletlessOnboardingEmail(senderEmail, senderName).catch((err) => {
-        console.error("Failed to send onboarding email:", err);
-      });
     }
 
     res.status(201).json({

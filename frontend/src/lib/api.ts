@@ -28,8 +28,6 @@ export async function createPayment(data: {
   walletless?: boolean; // walletless recipient
   walletlessSender?: boolean; // walletless sender
   claimPin?: string;
-  senderName?: string;
-  senderEmail?: string;
 }) {
   return fetchApi('/api/payments', {
     method: 'POST',

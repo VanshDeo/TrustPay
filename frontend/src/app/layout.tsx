@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ClientProviders from '@/components/ClientProviders';
+import NotificationBanner from '@/components/NotificationBanner';
 
 export const metadata: Metadata = {
   title: 'TrustPay — Conditional Smart Payments on Stellar',
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="antialiased">
+        <NotificationBanner />
         <ClientProviders>
           {children}
         </ClientProviders>
