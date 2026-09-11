@@ -15,6 +15,9 @@ export default function CreatePaymentPage() {
   const [walletlessSender, setWalletlessSender] = useState(false);
   const [walletlessRecipient, setWalletlessRecipient] = useState(false);
   
+  const [senderName, setSenderName] = useState('');
+  const [senderEmail, setSenderEmail] = useState('');
+
   const [beneficiary, setBeneficiary] = useState('');
   const [claimPin, setClaimPin] = useState('');
   
@@ -96,6 +99,8 @@ export default function CreatePaymentPage() {
         walletless: walletlessRecipient,
         walletlessSender,
         claimPin: walletlessRecipient ? claimPin : undefined,
+        senderName: senderName.trim() || undefined,
+        senderEmail: senderEmail.trim() || undefined,
       });
 
       if (result.success) {
@@ -194,7 +199,9 @@ export default function CreatePaymentPage() {
                 setMilestones(['']); 
                 setWalletlessRecipient(false); 
                 setWalletlessSender(false);
-                setClaimPin(''); 
+                setClaimPin('');
+                setSenderName('');
+                setSenderEmail('');
                 setTemporarySecretInfo(null);
             }}
             className="btn-secondary w-full"
@@ -245,10 +252,33 @@ export default function CreatePaymentPage() {
               </div>
             )}
             {!walletlessSender && isConnected && (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2 mb-4">
                     <Check className="h-4 w-4" /> Connected as: <span className="font-mono">{publicKey?.substring(0, 8)}...</span>
                 </div>
             )}
+            
+            <div className="pt-4 border-t border-white/10 mt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white/60 mb-2">Your Name (Optional)</label>
+                <input
+                  type="text"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="e.g. Satoshi Nakamoto"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/60 mb-2">Your Email (Optional)</label>
+                <input
+                  type="email"
+                  value={senderEmail}
+                  onChange={(e) => setSenderEmail(e.target.value)}
+                  placeholder="e.g. you@example.com"
+                  className="input-field"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Recipient Settings */}

@@ -40,6 +40,8 @@ router.post('/', async (req: Request, res: Response) => {
       milestones,
       arbitrator,
       walletlessSender,
+      senderName,
+      senderEmail,
     } = req.body;
 
     // Generate a unique shareable link
@@ -49,7 +51,12 @@ router.post('/', async (req: Request, res: Response) => {
     if (senderAddress) {
       await User.findOneAndUpdate(
         { walletAddress: senderAddress },
-        { walletAddress: senderAddress, lastSeen: new Date() },
+        { 
+          walletAddress: senderAddress, 
+          lastSeen: new Date(),
+          ...(senderName && { name: senderName }),
+          ...(senderEmail && { email: senderEmail })
+        },
         { upsert: true, new: true }
       );
     }
@@ -89,6 +96,18 @@ router.post('/', async (req: Request, res: Response) => {
       temporarySenderPublicKey = keypair.publicKey();
       temporarySenderSecret = keypair.secret();
       finalSenderAddress = temporarySenderPublicKey;
+
+      // Upsert the temporary address as a user so we can store name/email
+      await User.findOneAndUpdate(
+        { walletAddress: finalSenderAddress },
+        { 
+          walletAddress: finalSenderAddress, 
+          lastSeen: new Date(),
+          ...(senderName && { name: senderName }),
+          ...(senderEmail && { email: senderEmail })
+        },
+        { upsert: true, new: true }
+      );
     }
     
     let dbMilestones = [];
