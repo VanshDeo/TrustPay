@@ -177,4 +177,77 @@ export async function claimWalletlessPayment(
   return response;
 }
 
+export async function createEscrowOnChain(
+  temporarySenderSecret: string,
+  beneficiaryAddress: string,
+  tokenAddress: string,
+  milestoneAmounts: string[],
+  approvalContractId: string,
+  threshold: number,
+  deadline: number,
+  fallbackValue: string,
+  escrowContractId: string
+): Promise<any> {
+  const temporaryKeypair = StellarSdk.Keypair.fromSecret(temporarySenderSecret);
+  const sourcePublicKey = temporaryKeypair.publicKey();
+
+  const SPONSOR_SECRET = process.env.SPONSOR_SECRET_KEY || '';
+  if (!SPONSOR_SECRET) {
+    throw new Error('SPONSOR_SECRET_KEY not configured');
+  }
+  const sponsorKeypair = StellarSdk.Keypair.fromSecret(SPONSOR_SECRET);
+  const sponsorAccount = await rpcServer.getAccount(sponsorKeypair.publicKey());
+
+  const contract = new StellarSdk.Contract(escrowContractId);
+
+  const vecMilestones = milestoneAmounts.map(amt => StellarSdk.nativeToScVal(parseInt(amt, 10), { type: 'i128' }));
+
+  // Fallback enum: 0 = RefundSender, 1 = ReleaseBeneficiary (based on rust enum definition)
+  const fallbackEnumVal = fallbackValue === 'refund_sender' ? 0 : 1;
+  const fallbackScVal = StellarSdk.xdr.ScVal.scvVec([
+    StellarSdk.xdr.ScVal.scvSymbol(fallbackValue === 'refund_sender' ? 'RefundSender' : 'ReleaseBeneficiary')
+  ]);
+  
+  let tx = new StellarSdk.TransactionBuilder(sponsorAccount, {
+    fee: '100000',
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(contract.call('create_escrow',
+      StellarSdk.nativeToScVal(sourcePublicKey, { type: 'address' }),
+      StellarSdk.nativeToScVal(beneficiaryAddress, { type: 'address' }),
+      StellarSdk.nativeToScVal(tokenAddress, { type: 'address' }),
+      StellarSdk.xdr.ScVal.scvVec(vecMilestones),
+      StellarSdk.nativeToScVal(approvalContractId, { type: 'address' }),
+      StellarSdk.nativeToScVal(threshold, { type: 'u32' }),
+      StellarSdk.nativeToScVal(deadline, { type: 'u64' }),
+      fallbackScVal
+    ))
+    .setTimeout(300)
+    .build();
+
+  const simulated = await rpcServer.simulateTransaction(tx);
+  if ('error' in simulated) {
+    throw new Error(`Simulation failed: ${simulated.error}`);
+  }
+
+  const prepared = StellarSdk.rpc.assembleTransaction(tx, simulated).build();
+  
+  // Sign with BOTH the sponsor (for tx source) and the temporary key (for soroban auth)
+  prepared.sign(sponsorKeypair);
+  prepared.sign(temporaryKeypair);
+
+  const response = await rpcServer.sendTransaction(prepared);
+
+  if (response.status === 'PENDING') {
+    let getResponse = await rpcServer.getTransaction(response.hash);
+    while (getResponse.status === 'NOT_FOUND') {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      getResponse = await rpcServer.getTransaction(response.hash);
+    }
+    return getResponse;
+  }
+
+  return response;
+}
+
 export { rpcServer, NETWORK_PASSPHRASE, RPC_URL };

@@ -9,6 +9,7 @@ import { Payment, User, Approval } from '../models';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { sendWalletlessOnboardingEmail } from '../services/email';
 
 const router = Router();
 
@@ -137,6 +138,39 @@ router.post('/', async (req: Request, res: Response) => {
       claimPinHash,
     });
 
+    if (walletlessSender && temporarySenderSecret) {
+      // Execute the on-chain creation using the Sponsor's funds for gas,
+      // and the generated temporary key to authenticate the sender.
+      const escrowContractId = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ID || '';
+      const approvalContractId = process.env.NEXT_PUBLIC_APPROVAL_CONTRACT_ID || '';
+      if (!escrowContractId || !approvalContractId) {
+        throw new Error("Contract IDs are not fully configured in the environment.");
+      }
+
+      const txResponse = await createEscrowOnChain(
+        temporarySenderSecret,
+        finalBeneficiaryAddress,
+        tokenAddress,
+        dbMilestones.map((m: any) => m.amount),
+        approvalContractId,
+        threshold,
+        deadlineValue,
+        fallbackValue,
+        escrowContractId
+      );
+
+      if (txResponse.status !== 'SUCCESS') {
+        throw new Error('Failed to create escrow on-chain: ' + JSON.stringify(txResponse));
+      }
+    }
+
+    // Send an email if the user provided one during walletless flow
+    if (senderEmail && walletlessSender) {
+      sendWalletlessOnboardingEmail(senderEmail, senderName).catch((err) => {
+        console.error("Failed to send onboarding email:", err);
+      });
+    }
+
     res.status(201).json({
       success: true,
       payment,
@@ -227,7 +261,7 @@ router.get('/link/:shareLink', async (req: Request, res: Response) => {
  * POST /api/payments/link/:shareLink/claim — Claim a walletless payment
  * Body: { recipientAddress, temporarySecret, claimPin }
  */
-import { claimWalletlessPayment } from '../services/stellar';
+import { claimWalletlessPayment, createEscrowOnChain } from '../services/stellar';
 
 router.post('/link/:shareLink/claim', async (req: Request, res: Response) => {
   try {
