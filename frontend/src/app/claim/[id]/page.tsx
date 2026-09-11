@@ -7,9 +7,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Shield, Clock, CheckCircle2, XCircle, Loader2, Users } from 'lucide-react';
+import { Shield, Clock, CheckCircle2, XCircle, Loader2, Users, Wallet } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
-import { getPaymentByLink } from '@/lib/api';
+import { getPaymentByLink, claimWalletlessPayment } from '@/lib/api';
 import { stroopsToXlm, truncateAddress } from '@/lib/stellar';
 
 interface PaymentData {
@@ -21,6 +21,7 @@ interface PaymentData {
   threshold: number;
   approvers: string[];
   shareLink: string;
+  walletless?: boolean;
 }
 
 interface ApprovalData {
@@ -37,6 +38,12 @@ export default function ClaimPage() {
   const [approvals, setApprovals] = useState<ApprovalData[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
+  
+  // Walletless claim states
+  const [claimPin, setClaimPin] = useState('');
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState('');
+  const [claimSuccess, setClaimSuccess] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -83,6 +90,44 @@ export default function ClaimPage() {
       console.error('Approval error:', error);
     } finally {
       setApproving(false);
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!publicKey || !payment) return;
+    setClaimError('');
+    setClaiming(true);
+
+    try {
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+      const temporarySecret = hashParams.get('secret');
+
+      if (!temporarySecret) {
+        setClaimError('Missing secret in URL. Make sure you used the full link.');
+        setClaiming(false);
+        return;
+      }
+
+      const result = await claimWalletlessPayment(id, {
+        recipientAddress: publicKey,
+        temporarySecret,
+        claimPin,
+      });
+
+      if (result.success) {
+        setClaimSuccess(true);
+        // Refresh payment data
+        const data = await getPaymentByLink(id);
+        if (data.success) {
+          setPayment(data.payment);
+        }
+      } else {
+        setClaimError(result.error || 'Failed to claim payment');
+      }
+    } catch (error: any) {
+      setClaimError(error.message || 'An error occurred during claim');
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -143,7 +188,9 @@ export default function ClaimPage() {
             </div>
             <div>
               <p className="text-white/40 mb-1">To</p>
-              <p className="font-mono text-indigo-300">{truncateAddress(payment.beneficiaryAddress)}</p>
+              <p className="font-mono text-indigo-300">
+                {payment.walletless ? "Hidden (Claim to Reveal)" : truncateAddress(payment.beneficiaryAddress)}
+              </p>
             </div>
           </div>
         </div>
@@ -192,7 +239,68 @@ export default function ClaimPage() {
           )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Walletless Claim Form */}
+        {payment.status === 'released' && payment.walletless && !claimSuccess && (
+          <div className="glass-card-static !p-6 mb-6 border-indigo-500/30">
+            <div className="flex items-center gap-2 mb-4">
+              <Wallet className="h-5 w-5 text-indigo-400" />
+              <h3 className="font-semibold text-white">Claim Your Funds</h3>
+            </div>
+            <p className="text-sm text-white/60 mb-6">
+              This payment has been released! Enter your Claim PIN and connect your wallet to receive the funds.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white/60 mb-2">Claim PIN</label>
+                <input
+                  type="password"
+                  value={claimPin}
+                  onChange={(e) => setClaimPin(e.target.value)}
+                  placeholder="Enter PIN"
+                  className="input-field"
+                />
+              </div>
+
+              {claimError && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
+                  {claimError}
+                </div>
+              )}
+
+              {!isConnected ? (
+                <button onClick={connectWallet} className="btn-primary w-full">
+                  Connect Wallet to Claim
+                </button>
+              ) : (
+                <button
+                  onClick={handleClaim}
+                  disabled={claiming || !claimPin}
+                  className="btn-primary w-full flex items-center justify-center gap-2 !from-emerald-500 !to-teal-500"
+                  style={{ background: 'linear-gradient(135deg, #10b981, #14b8a6)' }}
+                >
+                  {claiming ? (
+                    <><Loader2 className="h-5 w-5 animate-spin" /> Claiming...</>
+                  ) : (
+                    <><CheckCircle2 className="h-5 w-5" /> Claim to Wallet</>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {claimSuccess && (
+          <div className="glass-card-static !p-6 mb-6 border-emerald-500/30 bg-emerald-500/5 text-center">
+            <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto mb-3" />
+            <h3 className="font-semibold text-white mb-1">Claim Successful!</h3>
+            <p className="text-sm text-white/60">
+              The funds have been transferred to your wallet.
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons (For Approvers/Sender) */}
         {payment.status === 'pending' && (
           <div className="space-y-3">
             {!isConnected ? (

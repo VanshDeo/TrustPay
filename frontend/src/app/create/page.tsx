@@ -6,13 +6,15 @@
  */
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PlusCircle, X, Copy, Check, ArrowRight, Loader2 } from 'lucide-react';
+import { PlusCircle, X, Copy, Check, ArrowRight, Loader2, Wallet, Users } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { createPayment } from '@/lib/api';
 
 export default function CreatePaymentPage() {
   const { publicKey, isConnected, connectWallet } = useWallet();
+  const [walletless, setWalletless] = useState(false);
   const [beneficiary, setBeneficiary] = useState('');
+  const [claimPin, setClaimPin] = useState('');
   const [amount, setAmount] = useState('');
   const [threshold, setThreshold] = useState(2);
   const [approvers, setApprovers] = useState<string[]>(['', '', '']);
@@ -34,6 +36,10 @@ export default function CreatePaymentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publicKey) return;
+    if (walletless && claimPin.length < 4) {
+      alert("Claim PIN must be at least 4 characters");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -42,15 +48,21 @@ export default function CreatePaymentPage() {
 
       const result = await createPayment({
         senderAddress: publicKey,
-        beneficiaryAddress: beneficiary,
+        beneficiaryAddress: walletless ? undefined : beneficiary,
         tokenAddress: 'native',
         amount: xlmAmount,
         threshold,
         approvers: validApprovers,
+        walletless,
+        claimPin: walletless ? claimPin : undefined,
       });
 
       if (result.success) {
-        setShareLink(`${window.location.origin}/claim/${result.payment.shareLink}`);
+        let finalLink = `${window.location.origin}/claim/${result.payment.shareLink}`;
+        if (result.temporarySecret) {
+          finalLink += `#secret=${result.temporarySecret}`;
+        }
+        setShareLink(finalLink);
       }
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -59,11 +71,26 @@ export default function CreatePaymentPage() {
     }
   };
 
-  const copyLink = () => {
+  const copyLink = async () => {
     if (shareLink) {
-      navigator.clipboard.writeText(shareLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'TrustPay Escrow Payment',
+            text: 'You received a protected payment on TrustPay.',
+            url: shareLink,
+          });
+        } else {
+          await navigator.clipboard.writeText(shareLink);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+      } catch (err) {
+        // Fallback or user cancelled share
+        await navigator.clipboard.writeText(shareLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
     }
   };
 
@@ -101,6 +128,15 @@ export default function CreatePaymentPage() {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Payment Created! 🎉</h2>
           <p className="text-white/40 mb-6">Share this link with your approvers and beneficiary.</p>
+          
+          {walletless && (
+            <div className="mb-6 rounded-xl bg-orange-500/10 border border-orange-500/20 p-4 text-left">
+              <p className="text-sm text-orange-200 mb-1 font-semibold">Important:</p>
+              <p className="text-xs text-orange-200/80">
+                You chose a walletless payment. The recipient will need the link below AND the Claim PIN you set earlier to claim these funds. Do not lose the PIN.
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 mb-6">
             <input
@@ -114,7 +150,7 @@ export default function CreatePaymentPage() {
           </div>
 
           <button
-            onClick={() => { setShareLink(null); setBeneficiary(''); setAmount(''); }}
+            onClick={() => { setShareLink(null); setBeneficiary(''); setAmount(''); setWalletless(false); setClaimPin(''); }}
             className="btn-secondary w-full"
           >
             Create Another Payment
@@ -134,18 +170,50 @@ export default function CreatePaymentPage() {
         <p className="text-white/40 mb-8">Set up a conditional escrow payment with multi-sig approval.</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Beneficiary */}
-          <div>
-            <label className="block text-sm font-medium text-white/60 mb-2">Beneficiary Address</label>
-            <input
-              type="text"
-              value={beneficiary}
-              onChange={(e) => setBeneficiary(e.target.value)}
-              placeholder="G... (Stellar public key)"
-              className="input-field font-mono text-sm"
-              required
-            />
+          {/* Recipient Type Toggle */}
+          <div className="bg-white/5 rounded-xl p-1 flex">
+            <button
+              type="button"
+              onClick={() => setWalletless(false)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-all ${!walletless ? 'bg-indigo-500 text-white shadow-lg' : 'text-white/50 hover:text-white/80'}`}
+            >
+              <Wallet className="h-4 w-4" /> Has Wallet
+            </button>
+            <button
+              type="button"
+              onClick={() => setWalletless(true)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-all ${walletless ? 'bg-indigo-500 text-white shadow-lg' : 'text-white/50 hover:text-white/80'}`}
+            >
+              <Users className="h-4 w-4" /> No Wallet
+            </button>
           </div>
+
+          {/* Beneficiary or PIN */}
+          {walletless ? (
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">Claim PIN (Share this with recipient separately)</label>
+              <input
+                type="text"
+                value={claimPin}
+                onChange={(e) => setClaimPin(e.target.value)}
+                placeholder="e.g. 1234 or a secret word"
+                className="input-field"
+                required
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">Beneficiary Address</label>
+              <input
+                type="text"
+                value={beneficiary}
+                onChange={(e) => setBeneficiary(e.target.value)}
+                placeholder="G... (Stellar public key)"
+                className="input-field font-mono text-sm"
+                required
+              />
+            </div>
+          )}
 
           {/* Amount */}
           <div>
@@ -220,7 +288,7 @@ export default function CreatePaymentPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting || !beneficiary || !amount}
+            disabled={isSubmitting || (!walletless && !beneficiary) || (walletless && !claimPin) || !amount}
             className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
