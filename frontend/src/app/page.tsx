@@ -1,211 +1,252 @@
 'use client';
 
 /**
- * Landing Page — TrustPay hero section with feature cards and live stats.
+ * Landing Page — Decluttered, Invisible Blockchain UX per Design.md
+ *
+ * One headline, primary CTA ('Create a protected payment'),
+ * secondary CTA ('I received a link' with quick claim lookup),
+ * 3 real differentiators, and 3 key stats.
  */
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Shield, Users, Zap, Wallet, ArrowRight, Lock, Globe, TrendingUp } from 'lucide-react';
-import { useWallet } from '@/context/WalletContext';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowRight,
+  Link as LinkIcon,
+  ShieldCheck,
+  Zap,
+  Clock,
+  Sparkles,
+  ChevronRight,
+  ExternalLink,
+} from 'lucide-react';
 
-const features = [
+const differentiators = [
   {
-    icon: Lock,
-    title: 'Escrow Payments',
-    description: 'Lock funds in a smart contract. Released only when conditions are met on-chain.',
-    gradient: 'from-blue-500 to-indigo-500',
-  },
-  {
-    icon: Users,
-    title: 'Multi-Sig Approval',
-    description: 'Configurable M-of-N approval threshold. Multiple parties verify before release.',
-    gradient: 'from-purple-500 to-pink-500',
+    icon: LinkIcon,
+    title: 'Walletless Claiming',
+    description: 'Send protected money to anyone via a link. Recipients claim straight to bank or passkey without seed phrases.',
   },
   {
     icon: Zap,
-    title: 'Gasless Transactions',
-    description: 'Users never pay fees. Our fee sponsor covers gas costs via fee bump transactions.',
-    gradient: 'from-emerald-500 to-teal-500',
+    title: 'Zero Fees, Fully Sponsored',
+    description: 'All network costs are sponsored automatically. You never see gas fees or cryptic network prompts.',
   },
   {
-    icon: Wallet,
-    title: 'Smart Wallet',
-    description: 'Account abstraction for simplified auth. No seed phrase management needed.',
-    gradient: 'from-orange-500 to-amber-500',
+    icon: ShieldCheck,
+    title: 'Self-Enforcing Conditions',
+    description: 'Milestones, multi-party approvals, and automated timeout refunds execute strictly as programmed.',
   },
 ];
 
-const stats = [
-  { label: 'Smart Contracts', value: '4', icon: Shield },
-  { label: 'Blockchain', value: 'Stellar', icon: Globe },
-  { label: 'Avg Finality', value: '~5s', icon: TrendingUp },
+const keyStats = [
+  { label: 'Network Finality', value: '~5 sec' },
+  { label: 'Sender/Recipient Gas Fees', value: '$0.00' },
+  { label: 'Smart Rule Guarantee', value: '100%' },
 ];
 
 export default function LandingPage() {
-  const { connectWallet, isConnected } = useWallet();
+  const router = useRouter();
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [claimInput, setClaimInput] = useState('');
+  const [claimError, setClaimError] = useState('');
+
+  const handleClaimLookup = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = claimInput.trim();
+    if (!trimmed) return;
+
+    // Extract ID if a full URL was pasted
+    let resolvedId = trimmed;
+    try {
+      if (trimmed.includes('/claim/')) {
+        const parts = trimmed.split('/claim/');
+        resolvedId = parts[1].split(/[?#]/)[0];
+      }
+    } catch {
+      // Use as-is
+    }
+
+    if (!resolvedId) {
+      setClaimError('Please enter a valid claim link or ID');
+      return;
+    }
+
+    router.push(`/claim/${resolvedId}`);
+  };
 
   return (
-    <div className="relative">
+    <div className="relative min-h-[90vh] flex flex-col justify-between">
       {/* ─── Hero Section ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-4 pt-20 pb-32 sm:px-6 lg:px-8">
-        {/* Animated background orbs */}
-        <div className="absolute top-20 left-10 h-72 w-72 rounded-full bg-indigo-500/10 blur-[100px] animate-float" />
-        <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-purple-500/8 blur-[120px]" style={{ animationDelay: '1s' }} />
+      <section className="relative overflow-hidden px-4 pt-16 pb-20 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center w-full">
+        {/* Subtle background glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 h-80 w-80 rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
 
-        <div className="relative mx-auto max-w-5xl text-center">
-          {/* Badge */}
-          <motion.div
-            className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/5 px-4 py-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm text-indigo-300">Live on Stellar Testnet</span>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.h1
-            className="mb-6 text-4xl font-extrabold leading-tight sm:text-5xl lg:text-7xl"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            Trustless Payments,{' '}
-            <span className="gradient-text">Verified On‑Chain</span>
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            className="mx-auto mb-10 max-w-2xl text-lg text-white/50 sm:text-xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            Create conditional payments that release only when your rules are met.
-            Multi-sig approval, gasless UX, and smart wallet — all powered by Soroban.
-          </motion.p>
-
-          {/* CTA Buttons */}
-          <motion.div
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            {isConnected ? (
-              <Link href="/create" className="btn-primary text-lg flex items-center gap-2">
-                Create Payment <ArrowRight className="h-5 w-5" />
-              </Link>
-            ) : (
-              <button onClick={connectWallet} className="btn-primary text-lg flex items-center gap-2">
-                Connect Wallet <Wallet className="h-5 w-5" />
-              </button>
-            )}
-            <Link href="/dashboard" className="btn-secondary text-lg">
-              View Dashboard
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Stats Strip */}
+        {/* Live Status Pill */}
         <motion.div
-          className="relative mx-auto mt-20 max-w-3xl"
-          initial={{ opacity: 0, y: 40 }}
+          className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 backdrop-blur-md"
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="grid grid-cols-3 gap-4">
-            {stats.map((stat, i) => (
-              <div key={i} className="glass-card-static text-center !p-4">
-                <stat.icon className="mx-auto mb-2 h-5 w-5 text-indigo-400" />
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-                <p className="text-xs text-white/40">{stat.label}</p>
-              </div>
-            ))}
-          </div>
+          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-xs font-medium text-white/80">Protected Payments on Stellar</span>
+        </motion.div>
+
+        {/* One Strong Headline */}
+        <motion.h1
+          className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl mb-6 max-w-4xl mx-auto leading-[1.1]"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          Money moves only when{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-200">
+            conditions are met.
+          </span>
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          className="mx-auto mb-10 max-w-2xl text-base sm:text-lg text-white/60 leading-relaxed"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          Set up milestone payments, auto-refund deadlines, or autonomous agent spending limits. No crypto jargon, no seed phrases, and zero gas fees.
+        </motion.p>
+
+        {/* Action CTAs (Primary & Secondary per Design.md) */}
+        <motion.div
+          className="flex flex-col sm:flex-row items-center justify-center gap-3.5"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          {/* Primary CTA */}
+          <Link
+            href="/create"
+            className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 group"
+          >
+            Create a protected payment
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          {/* Secondary CTA */}
+          <button
+            onClick={() => {
+              setClaimError('');
+              setClaimModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/90 font-medium text-sm border border-white/10 transition-colors flex items-center justify-center gap-2"
+          >
+            <LinkIcon className="h-4 w-4 text-indigo-400" />
+            I received a link
+          </button>
+        </motion.div>
+
+        {/* Clean 3-Metric Strip */}
+        <motion.div
+          className="mt-16 pt-8 border-t border-white/5 grid grid-cols-3 gap-4 max-w-2xl mx-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          {keyStats.map((stat, i) => (
+            <div key={i} className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-white font-mono">{stat.value}</p>
+              <p className="text-xs text-white/40 mt-0.5">{stat.label}</p>
+            </div>
+          ))}
         </motion.div>
       </section>
 
-      {/* ─── Features Section ────────────────────────────────────────────── */}
-      <section className="relative px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl font-bold text-white sm:text-4xl mb-4">
-              Built for <span className="gradient-text">Trust</span>
-            </h2>
-            <p className="text-white/40 max-w-xl mx-auto">
-              Four production-grade smart contracts working together to eliminate trust issues in digital payments.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {features.map((feature, i) => (
-              <motion.div
+      {/* ─── 3 Core Differentiators (Cut the feature wall) ────────────────── */}
+      <section className="px-4 pb-20 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {differentiators.map((diff, i) => {
+            const Icon = diff.icon;
+            return (
+              <div
                 key={i}
-                className="glass-card group cursor-default"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-indigo-500/30 transition-all space-y-3"
               >
-                <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feature.gradient} opacity-80`}>
-                  <feature.icon className="h-6 w-6 text-white" />
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="mb-2 text-xl font-semibold text-white">{feature.title}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
+                <h3 className="text-base font-semibold text-white">{diff.title}</h3>
+                <p className="text-xs text-white/50 leading-relaxed">{diff.description}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* ─── How It Works ────────────────────────────────────────────────── */}
-      <section className="relative px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl font-bold text-white sm:text-4xl mb-4">
-              How It <span className="gradient-text">Works</span>
-            </h2>
-          </motion.div>
-
-          <div className="space-y-8">
-            {[
-              { step: '01', title: 'Create Escrow', desc: 'Set amount, beneficiary, and approval rules. Funds are locked on-chain.' },
-              { step: '02', title: 'Share Link', desc: 'Get a unique payment link to share with approvers and the beneficiary.' },
-              { step: '03', title: 'Collect Approvals', desc: 'Approvers sign transactions. Progress is tracked in real-time.' },
-              { step: '04', title: 'Release Funds', desc: 'Once threshold is met, funds are automatically released to the beneficiary.' },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                className="flex items-start gap-6 glass-card-static !p-5"
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <div className="flex-shrink-0 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500">
-                  <span className="text-lg font-bold text-white">{item.step}</span>
+      {/* ─── "I received a link" Modal ────────────────────────────────────── */}
+      <AnimatePresence>
+        {claimModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-indigo-400" />
+                  <h3 className="text-base font-bold text-white">Claim Protected Payment</h3>
                 </div>
+                <button
+                  onClick={() => setClaimModalOpen(false)}
+                  className="text-white/40 hover:text-white text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-white/60">
+                Paste the payment link or escrow ID you received to claim your funds. No crypto wallet is required to view your deal.
+              </p>
+
+              <form onSubmit={handleClaimLookup} className="space-y-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">{item.title}</h3>
-                  <p className="text-white/40 text-sm">{item.desc}</p>
+                  <input
+                    type="text"
+                    placeholder="e.g. escrow_123 or https://.../claim/..."
+                    value={claimInput}
+                    onChange={(e) => {
+                      setClaimInput(e.target.value);
+                      setClaimError('');
+                    }}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/30 focus:border-indigo-500 focus:outline-none"
+                  />
+                  {claimError && <p className="text-[11px] text-red-400 mt-1">{claimError}</p>}
                 </div>
-              </motion.div>
-            ))}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setClaimModalOpen(false)}
+                    className="btn-secondary !py-2 !px-4 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary !py-2 !px-5 text-xs flex items-center gap-1.5"
+                  >
+                    Open Payment
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      </section>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

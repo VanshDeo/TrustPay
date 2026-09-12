@@ -22,6 +22,9 @@ interface PaymentData {
   approvers: string[];
   shareLink: string;
   walletless?: boolean;
+  deadline?: number;
+  fallback?: 'refund_sender' | 'release_beneficiary';
+  milestones?: { amount: string; status: string }[];
 }
 
 interface ApprovalData {
@@ -194,6 +197,23 @@ export default function ClaimPage() {
             </div>
           </div>
         </div>
+
+        {/* Trust Rule: Deadline & Fallback Guarantee */}
+        {payment.deadline && payment.deadline > 0 && (
+          <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 mb-6 flex items-start gap-3">
+            <Clock className="h-4 w-4 text-indigo-400 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-0.5">
+              <span className="font-semibold text-white">Trust Condition: Automated Deadline</span>
+              <p className="text-white/60">
+                If required approvals are not met before deadline, funds will automatically{' '}
+                <span className="text-indigo-300 font-medium">
+                  {payment.fallback === 'release_beneficiary' ? 'release to the recipient' : 'refund to the sender'}
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Approval Progress */}
         <div className="glass-card-static !p-6 mb-6">

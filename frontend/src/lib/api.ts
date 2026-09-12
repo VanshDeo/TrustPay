@@ -182,3 +182,16 @@ export async function revokeApiKey(keyId: string) {
     method: 'DELETE',
   });
 }
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export async function recordPageView(path: string, referrer?: string) {
+  try {
+    return fetchApi('/api/metrics/pageview', {
+      method: 'POST',
+      body: JSON.stringify({ path, referrer }),
+    });
+  } catch (e) {
+    // Non-blocking telemetry
+  }
+}
