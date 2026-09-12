@@ -121,6 +121,20 @@ router.post('/', async (req: Request, res: Response) => {
     if (walletlessSender && temporarySenderSecret) {
       // Execute the on-chain creation using the Sponsor's funds for gas,
       // and the generated temporary key to authenticate the sender.
+      
+      // Since this is Testnet and the temporary key is randomly generated, it has no XLM balance.
+      // We must fund it via Friendbot before we can transfer tokens out of it.
+      try {
+        console.log(`🤖 Funding temporary sender account ${finalSenderAddress} via Friendbot...`);
+        const response = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(finalSenderAddress)}`);
+        if (!response.ok) {
+          console.error(`Friendbot failed with status ${response.status}`);
+        } else {
+          console.log(`✅ Funded temporary sender account successfully.`);
+        }
+      } catch (e) {
+        console.error('Failed to fund temporary sender account via Friendbot:', e);
+      }
       const escrowContractId = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ID || '';
       const approvalContractId = process.env.NEXT_PUBLIC_APPROVAL_CONTRACT_ID || '';
       if (!escrowContractId || !approvalContractId) {

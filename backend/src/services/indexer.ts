@@ -130,10 +130,25 @@ export async function indexEvents(): Promise<void> {
  */
 export function startIndexer(): void {
   console.log('📡 Event indexer started (polling every 10s)');
-  // Run immediately
-  indexEvents().catch(console.error);
-  // Then run on interval
-  setInterval(() => {
+  
+  // Initialize lastProcessedLedger to the current network ledger first
+  import('./stellar').then(({ rpcServer }) => {
+    return rpcServer.getLatestLedger();
+  }).then(latestLedger => {
+    lastProcessedLedger = latestLedger.sequence;
+    console.log(`📡 Initialized indexer at ledger ${lastProcessedLedger}`);
+    
+    // Run immediately
     indexEvents().catch(console.error);
-  }, 10_000);
+    // Then run on interval
+    setInterval(() => {
+      indexEvents().catch(console.error);
+    }, 10_000);
+  }).catch(err => {
+    console.error('Failed to initialize indexer ledger:', err);
+    // Fallback
+    setInterval(() => {
+      indexEvents().catch(console.error);
+    }, 10_000);
+  });
 }

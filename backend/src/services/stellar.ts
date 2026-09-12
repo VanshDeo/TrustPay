@@ -138,6 +138,12 @@ export async function claimWalletlessPayment(
   const sponsorKeypair = StellarSdk.Keypair.fromSecret(SPONSOR_SECRET);
   const sponsorAccount = await rpcServer.getAccount(sponsorKeypair.publicKey());
 
+  // Handle "native" token explicitly
+  if (tokenAddress === 'native' || tokenAddress === 'XLM') {
+    // Native XLM token contract on Testnet
+    tokenAddress = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
+  }
+
   const contract = new StellarSdk.Contract(tokenAddress);
   
   let tx = new StellarSdk.TransactionBuilder(sponsorAccount, {
@@ -197,6 +203,12 @@ export async function createEscrowOnChain(
   }
   const sponsorKeypair = StellarSdk.Keypair.fromSecret(SPONSOR_SECRET);
   const sponsorAccount = await rpcServer.getAccount(sponsorKeypair.publicKey());
+
+  // Handle "native" token explicitly
+  if (tokenAddress === 'native' || tokenAddress === 'XLM') {
+    // Native XLM token contract on Testnet
+    tokenAddress = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
+  }
 
   const contract = new StellarSdk.Contract(escrowContractId);
 
