@@ -7,13 +7,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Wallet, LayoutDashboard, PlusCircle, BarChart3 } from 'lucide-react';
+import { Menu, X, Wallet, LayoutDashboard, PlusCircle, BarChart3, Terminal } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 
 const navLinks = [
   { href: '/create', label: 'Create Payment', icon: PlusCircle },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/metrics', label: 'Metrics', icon: BarChart3 },
+  { href: '/developer', label: 'Developer / Agents', icon: Terminal },
 ];
 
 export default function Navbar() {

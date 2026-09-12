@@ -121,3 +121,5 @@ const TransactionSchema = new Schema<ITransaction>({
 });
 
 export const Transaction = mongoose.model<ITransaction>('Transaction', TransactionSchema);
+
+export * from './gateway';

@@ -90,3 +90,95 @@ export async function submitSponsoredTx(signedTxXdr: string) {
 export async function getMetrics() {
   return fetchApi('/api/metrics');
 }
+
+// ─── AI Deal Builder ──────────────────────────────────────────────────────────
+
+export async function parseDealWithAI(prompt: string) {
+  return fetchApi('/api/ai/parse-deal', {
+    method: 'POST',
+    body: JSON.stringify({ prompt }),
+  });
+}
+
+// ─── Agentic Payment Gateway (x402) ──────────────────────────────────────────
+
+export async function getGatewayResources() {
+  return fetchApi('/api/gateway/resources');
+}
+
+export async function requestGatewayResource(resourceId: string, options?: { escrowId?: string; agentAddress?: string }) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (options?.escrowId) {
+    headers['X-Escrow-Id'] = options.escrowId;
+  }
+  if (options?.agentAddress) {
+    headers['X-Agent-Address'] = options.agentAddress;
+  }
+
+  const res = await fetch(`${API_URL}/api/gateway/resource/${resourceId}`, {
+    method: 'GET',
+    headers,
+  });
+
+  const data = await res.json();
+  return { status: res.status, ok: res.ok, data };
+}
+
+export async function payGatewayResource(data: {
+  resourceId: string;
+  agentAddress: string;
+  amount?: string;
+  escrowId?: string;
+}) {
+  return fetchApi('/api/gateway/pay', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getAgentMandates(ownerAddress?: string) {
+  const query = ownerAddress ? `?ownerAddress=${encodeURIComponent(ownerAddress)}` : '';
+  return fetchApi(`/api/gateway/mandates${query}`);
+}
+
+export async function saveAgentMandate(data: {
+  agentAddress: string;
+  ownerAddress: string;
+  label: string;
+  perTxLimit: string;
+  perPeriodLimit: string;
+  periodDuration?: number;
+  tokenAddress?: string;
+}) {
+  return fetchApi('/api/gateway/mandates', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getGatewayLogs(params?: { agentAddress?: string; status?: string; limit?: number }) {
+  const q = new URLSearchParams();
+  if (params?.agentAddress) q.append('agentAddress', params.agentAddress);
+  if (params?.status) q.append('status', params.status);
+  if (params?.limit) q.append('limit', params.limit.toString());
+  const query = q.toString() ? `?${q.toString()}` : '';
+  return fetchApi(`/api/gateway/logs${query}`);
+}
+
+export async function getApiKeys(ownerAddress?: string) {
+  const query = ownerAddress ? `?ownerAddress=${encodeURIComponent(ownerAddress)}` : '';
+  return fetchApi(`/api/gateway/keys${query}`);
+}
+
+export async function generateApiKey(data: { name: string; ownerAddress: string }) {
+  return fetchApi('/api/gateway/keys', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function revokeApiKey(keyId: string) {
+  return fetchApi(`/api/gateway/keys/${keyId}`, {
+    method: 'DELETE',
+  });
+}

@@ -15,6 +15,8 @@ import paymentRoutes from './routes/payments';
 import contractRoutes from './routes/contracts';
 import sponsorRoutes from './routes/sponsor';
 import metricsRoutes from './routes/metrics';
+import { aiRouter } from './routes/ai';
+import { gatewayRouter } from './routes/gateway';
 
 dotenv.config();
 
@@ -33,6 +35,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/sponsor', sponsorRoutes);
 app.use('/api/metrics', metricsRoutes);
+app.use('/api/ai', aiRouter);
+app.use('/api/gateway', gatewayRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -54,7 +58,9 @@ async function start() {
   });
 }
 
-start().catch(console.error);
+if (process.env.NODE_ENV !== 'test') {
+  start().catch(console.error);
+}
 
 // Export app for testing
 export default app;

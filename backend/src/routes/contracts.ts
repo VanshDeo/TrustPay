@@ -70,11 +70,11 @@ router.get('/approval/:escrowId', async (req: Request, res: Response) => {
 
 /**
  * POST /api/contracts/approve — Build an approval transaction for user to sign
- * Body: { walletAddress, escrowId }
+ * Body: { walletAddress, escrowId, milestoneId }
  */
 router.post('/approve', async (req: Request, res: Response) => {
   try {
-    const { walletAddress, escrowId } = req.body;
+    const { walletAddress, escrowId, milestoneId = 0 } = req.body;
 
     if (!APPROVAL_CONTRACT) {
       return res.status(503).json({
@@ -90,6 +90,7 @@ router.post('/approve', async (req: Request, res: Response) => {
       [
         StellarSdk.nativeToScVal(walletAddress, { type: 'address' }),
         StellarSdk.nativeToScVal(parseInt(escrowId), { type: 'u64' }),
+        StellarSdk.nativeToScVal(parseInt(milestoneId), { type: 'u32' }),
       ]
     );
 
