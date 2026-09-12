@@ -8,7 +8,7 @@
 
 ## 🌐 Live Demo
 
-> **🔗 Live App:** [_[Add your deployed URL here](https://trust-pay-pi.vercel.app/)_](#)
+> **🔗 Live App:** [_(https://trust-pay-pi.vercel.app/)_](#)
 >
 > **🌍 Network:** Stellar Testnet
 
