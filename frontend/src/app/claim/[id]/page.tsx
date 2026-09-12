@@ -9,7 +9,7 @@ import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Shield, Clock, CheckCircle2, XCircle, Loader2, Users, Wallet } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
-import { getPaymentByLink, claimWalletlessPayment } from '@/lib/api';
+import { getPaymentByLink, claimWalletlessPayment, createPayment } from '@/lib/api';
 import { stroopsToXlm, truncateAddress } from '@/lib/stellar';
 
 interface PaymentData {
@@ -71,18 +71,14 @@ export default function ClaimPage() {
     try {
       // In production, this would build and sign a Soroban TX
       // For now, we record the approval via the backend
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/payments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          senderAddress: payment.senderAddress,
-          beneficiaryAddress: payment.beneficiaryAddress,
-          tokenAddress: 'native',
-          amount: payment.amount,
-          threshold: payment.threshold,
-          approvers: payment.approvers,
-          escrowId: payment.escrowId,
-        }),
+      await createPayment({
+        senderAddress: payment.senderAddress,
+        beneficiaryAddress: payment.beneficiaryAddress,
+        tokenAddress: 'native',
+        amount: payment.amount,
+        threshold: payment.threshold,
+        approvers: payment.approvers,
+        escrowId: payment.escrowId,
       });
       // Refresh data
       const data = await getPaymentByLink(id);

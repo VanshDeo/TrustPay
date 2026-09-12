@@ -22,11 +22,53 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
-// ─── Middleware ────────────────────────────────────────────────────────────────
+// ─── CORS Configuration ────────────────────────────────────────────────────────
+// Strip trailing slashes and support comma-separated origins
+const rawCorsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const allowedOrigins = rawCorsOrigin
+  .split(',')
+  .map((o) => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
 
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+if (!allowedOrigins.includes('http://localhost:3000')) {
+  allowedOrigins.push('http://localhost:3000');
+}
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+      const isAllowed =
+        allowedOrigins.some((allowed) => allowed === normalizedOrigin) ||
+        normalizedOrigin.endsWith('.vercel.app'); // Auto-allow Vercel domains
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS] Blocked origin: ${origin}. Allowed origins:`, allowedOrigins);
+        callback(null, false);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Escrow-Id',
+      'X-Payment-Tx',
+      'X-Agent-Address',
+      'X-Payment-Required',
+      'X-Payment-Asset',
+      'X-Payment-Amount',
+      'X-Payment-Destination',
+    ],
+  })
+);
+
 app.use(express.json());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -54,7 +96,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`🚀 TrustPay backend running on http://localhost:${PORT}`);
-    console.log(`📡 CORS enabled for: ${CORS_ORIGIN}`);
+    console.log(`📡 CORS enabled for: ${allowedOrigins.join(', ')}`);
   });
 }
 

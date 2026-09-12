@@ -3,10 +3,11 @@
  * All calls go through the Express backend.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
 
 async function fetchApi(path: string, options?: RequestInit) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const res = await fetch(`${API_URL}${cleanPath}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
