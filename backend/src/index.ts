@@ -73,12 +73,12 @@ app.use(express.json());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-app.use('/api/payments', paymentRoutes);
-app.use('/api/contracts', contractRoutes);
-app.use('/api/sponsor', sponsorRoutes);
-app.use('/api/metrics', metricsRoutes);
-app.use('/api/ai', aiRouter);
-app.use('/api/gateway', gatewayRouter);
+app.use('api/payments', paymentRoutes);
+app.use('api/contracts', contractRoutes);
+app.use('api/sponsor', sponsorRoutes);
+app.use('api/metrics', metricsRoutes);
+app.use('api/ai', aiRouter);
+app.use('api/gateway', gatewayRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
